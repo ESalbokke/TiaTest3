@@ -1,0 +1,787 @@
+﻿FUNCTION_BLOCK "Algorythm"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      DeclarationOfShifters : Int := 1;
+      AlgorithmType : Int;
+      block_main_conveyor : Bool;
+      block_all_conveyors : Bool;
+      Speed_of_motors : Int;
+      TimeBetweenShifters { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Time;
+      TimeActuatorsError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Time;
+   END_VAR
+
+   VAR_OUTPUT 
+      ID_paczki { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : LInt;
+      NextExit { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+      ShifterJam_1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      ShifterJam_2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      ShifterJam_3 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      ShifterJam_4 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      ShifterJam_5 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      EntryJam { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      PackageLost_shift1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      PackageLost_shift2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      PackageLost_shift3 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      PackageLost_shift4 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      PackageLost_shift5 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      PackageLost_entry { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      mEmergency { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      Alarm_24 : Bool;
+   END_VAR
+
+   VAR_IN_OUT 
+      Emergency_Stop : "Button_DT";
+      Start : "Button_DT";
+      Stop : "Button_DT";
+      Reset : "Button_DT";
+      Conveyor_1 : "Conveyor";
+      Conveyor_2 : "Conveyor";
+      Conveyor_3 : "Conveyor";
+      Conveyor_4 : "Conveyor";
+      Conveyor_5 : "Conveyor";
+      Conveyor_6 : "Conveyor";
+      Conveyor_7 : "Conveyor";
+      Conveyor_8 : "Conveyor";
+      Conveyor_9 : "Conveyor";
+      Conveyor_10 : "Conveyor";
+      Shifter_1 : "Shifter_DT";
+      Shifter_2 : "Shifter_DT";
+      Shifter_3 : "Shifter_DT";
+      Shifter_4 : "Shifter_DT";
+      Shifter_5 : "Shifter_DT";
+      Entry_Conveyor : "Entry_conveyor";
+      DataBlock : "Data_Block";
+   END_VAR
+
+   VAR_TEMP 
+      mStart : Bool;
+      mTransfer : Int;
+      mSortExit : Int;
+      NextExitRobin : Int;
+      Block : Bool;
+      NextExitScanner : Int;
+      mRobinExit : Int;
+      mNumberOfExits : Int;
+      StateOfConveyors : Array[0..10] of Int;
+      i : Int;
+      j : Int;
+      k : Int;
+      ErrorRead : Bool;
+      l : Int;
+      m : Int;
+      n : Int;
+      TransferShift1Memory : Bool;
+      Actuator_check_1 : Bool;
+      Actuator_error_1 : Bool;
+      Actuator_check_2 : Bool;
+      Actuator_error_2 : Bool;
+      Actuator_check_3 : Bool;
+      Actuator_error_3 : Bool;
+      Actuator_check_4 : Bool;
+      Actuator_error_4 : Bool;
+      Actuator_check_5 : Bool;
+      Actuator_error_5 : Bool;
+      TransferShift2Memory : Bool;
+      TransferShift5Memory : Bool;
+      TransferShift4Memory : Bool;
+      TransferShift3Memory : Bool;
+      TransferEntryMemory : Bool;
+      ErrorNotAvailable : Bool;
+      JamDetectionEnt : Bool;
+      JamDetectionSh1 : Bool;
+      JamDetectionSh2 : Bool;
+      JamDetectionSh3 : Bool;
+      JamDetectionSh4 : Bool;
+      JamDetectionSh5 : Bool;
+      jamdetectiontime : Time;
+      Jam : Bool;
+   END_VAR
+
+
+BEGIN
+	REGION Start button functionality 
+	    IF #Start.On AND #Stop.On AND #Emergency_Stop.Diode AND #mEmergency = 0 AND #Alarm_24 = 0 THEN
+	        #mStart := 1;
+	    ELSIF #Stop.On = 1 OR #mEmergency = 0 OR #Alarm_24 = 1 THEN
+	        #mStart := 0;
+	    END_IF;
+	END_REGION
+	
+	REGION Emergency button functionality 
+	    IF NOT #Emergency_Stop.On THEN
+	        #mEmergency := 1;
+	        #mTransfer := 0;
+	    ELSIF
+	        #Stop.On = 0 AND #Reset.On = 1 THEN
+	        #mEmergency := 0;
+	    END_IF;
+	END_REGION
+	
+	REGION signaling diodes
+	    
+	    IF #mEmergency = 1 THEN
+	        #Reset.Diode := 1;
+	        #Stop.Diode := 1;
+	        #Start.Diode := 0;
+	    ELSIF #Jam THEN
+	        #Start.Diode := 1;
+	        #Stop.Diode := 0;
+	        "IEC_Timer_diode".TP(IN := true,
+	                             PT := t#1s);
+	        IF "IEC_Timer_diode".Q THEN
+	            #Reset.Diode := NOT #Reset.Diode;
+	        END_IF;
+	    ELSIF #mStart AND NOT #Jam THEN
+	        #Reset.Diode := 0;
+	        #Stop.Diode := 0;
+	        #Start.Diode := 1;
+	    ELSE
+	        #Reset.Diode := 0;
+	        #Stop.Diode := 0;
+	        #Start.Diode := 0;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION Assigning number OF EXIT depending on used algorythm
+	    IF #AlgorithmType = 0 AND #mStart = 1 AND #mTransfer = 1 THEN
+	        #DataBlock.Next_exit := #mSortExit;
+	    ELSIF #AlgorithmType = 1 AND #mStart = 1 AND #mTransfer = 1 THEN
+	        #DataBlock.Next_exit := #NextExitRobin;
+	    ELSIF #AlgorithmType = 2 AND #mStart = 1 AND #mTransfer = 1 THEN
+	        #DataBlock.Next_exit := #NextExitScanner;
+	    ELSE
+	        #DataBlock.Next_exit := 0;
+	    END_IF;
+	END_REGION
+	
+	REGION jam detection 
+	    
+	    #JamDetectionEnt := #Entry_Conveyor.Motor."ON/OFF" AND #Entry_Conveyor.Entry_sensor.ON;
+	    #JamDetectionSh1 := #Shifter_1.Sensor.ON AND #Shifter_1.Sensor.ON;
+	    #JamDetectionSh2 := #Shifter_1.Sensor.ON AND #Shifter_1.Sensor.ON;
+	    #JamDetectionSh3 := #Shifter_1.Sensor.ON AND #Shifter_1.Sensor.ON;
+	    #JamDetectionSh4 := #Shifter_1.Sensor.ON AND #Shifter_1.Sensor.ON;
+	    #JamDetectionSh5 := #Shifter_1.Sensor.ON AND #Shifter_1.Sensor.ON;
+	    
+	    "IEC_Timer_Jam_entry".TON(IN := #JamDetectionEnt,
+	                              PT := #jamdetectiontime,
+	                              Q => #EntryJam);
+	    
+	"IEC_Timer_Jam_sh1".TON(IN:=#JamDetectionSh1,
+	                        PT:=#jamdetectiontime,
+	                        Q=>#ShifterJam_1);
+	
+	"IEC_Timer_Jam_sh2".TON(IN := #JamDetectionSh2,
+	                        PT := #jamdetectiontime,
+	                        Q => #ShifterJam_2);
+	
+	"IEC_Timer_Jam_sh3".TON(IN := #JamDetectionSh3,
+	                        PT := #jamdetectiontime,
+	                        Q => #ShifterJam_3);
+	
+	"IEC_Timer_Jam_sh4".TON(IN := #JamDetectionSh4,
+	                        PT := #jamdetectiontime,
+	                        Q => #ShifterJam_4);
+	
+	"IEC_Timer_Jam_sh5".TON(IN := #JamDetectionSh5,
+	                        PT := #jamdetectiontime,
+	                        Q => #ShifterJam_5);
+	#Jam := #mStart AND (#ShifterJam_1 OR #ShifterJam_2 OR #ShifterJam_3 OR #ShifterJam_4 OR #ShifterJam_5 OR #EntryJam);
+	END_REGION
+	
+	REGION blocking motors
+	    IF #"block_all_conveyors" OR #block_main_conveyor OR #mStart = 0 THEN
+	        #Block := 1;
+	    ELSE
+	        #Block := 0;
+	    END_IF;
+	END_REGION
+	
+	REGION assigning status OF conveyors TO an array
+	    IF #Shifter_1.LeftExit = 1 THEN
+	        #StateOfConveyors[1] := #Conveyor_1.Conveyor_state;
+	    ELSE
+	        #StateOfConveyors[1] := 3;
+	    END_IF;
+	    IF #Shifter_1.RightExit = 1 THEN
+	        #StateOfConveyors[2] := #Conveyor_2.Conveyor_state;
+	    ELSE
+	        #StateOfConveyors[2] := 3;
+	    END_IF;
+	    
+	    IF #Shifter_2.LeftExit = 1 THEN
+	        #StateOfConveyors[3] := #Conveyor_3.Conveyor_state;
+	    ELSE
+	        #StateOfConveyors[3] := 3;
+	    END_IF;
+	    IF #Shifter_2.RightExit = 1 THEN
+	        #StateOfConveyors[4] := #Conveyor_4.Conveyor_state;
+	    ELSE
+	        #StateOfConveyors[4] := 3;
+	    END_IF;
+	    
+	    IF #Shifter_3.LeftExit = 1 THEN
+	        #StateOfConveyors[5] := #Conveyor_5.Conveyor_state;
+	    ELSE
+	        #StateOfConveyors[5] := 3;
+	    END_IF;
+	    IF #Shifter_3.RightExit = 1 THEN
+	        #StateOfConveyors[6] := #Conveyor_6.Conveyor_state;
+	    ELSE
+	        #StateOfConveyors[6] := 3;
+	    END_IF;
+	    
+	    IF #Shifter_4.LeftExit = 1 THEN
+	        #StateOfConveyors[7] := #Conveyor_7.Conveyor_state;
+	    ELSE
+	        #StateOfConveyors[7] := 3;
+	    END_IF;
+	    
+	    
+	    IF #Shifter_4.RightExit = 1 THEN
+	        #StateOfConveyors[8] := #Conveyor_8.Conveyor_state;
+	    ELSE
+	        #StateOfConveyors[8] := 3;
+	    END_IF;
+	    IF #Shifter_5.LeftExit = 1 THEN
+	        #StateOfConveyors[9] := #Conveyor_9.Conveyor_state;
+	    ELSE
+	        #StateOfConveyors[9] := 3;
+	    END_IF;
+	    
+	    
+	    IF #Shifter_5.RightExit = 1 THEN
+	        #StateOfConveyors[10] := #Conveyor_10.Conveyor_state;
+	    ELSE
+	        #StateOfConveyors[10] := 3;
+	    END_IF;
+	END_REGION
+	
+	REGION Assigning speed OF motors 
+	    #Shifter_1.Motor.Speed := #Speed_of_motors;
+	    #Shifter_2.Motor.Speed := #Speed_of_motors;
+	    #Shifter_3.Motor.Speed := #Speed_of_motors;
+	    #Shifter_4.Motor.Speed := #Speed_of_motors;
+	    #Shifter_5.Motor.Speed := #Speed_of_motors;
+	END_REGION
+	
+	REGION Checking state OF the package during transport 
+	    "F_TRIG_DB"(CLK := #Entry_Conveyor.Entry_sensor.ON);
+	    "F_TRIG_DB_sh1"(CLK := #Shifter_1.Sensor.ON);
+	    "F_TRIG_DB_sh2"(CLK := #Shifter_2.Sensor.ON);
+	    "F_TRIG_DB_sh3"(CLK := #Shifter_3.Sensor.ON);
+	    "F_TRIG_DB_sh4"(CLK := #Shifter_4.Sensor.ON);
+	    "F_TRIG_DB_sh5"(CLK := #Shifter_5.Sensor.ON);
+	    
+	
+	    "IEC_Timer_state_of_package".TON(IN:=#TransferShift1Memory,
+	                                     PT:=#TimeBetweenShifters,
+	                                     Q=>#PackageLost_shift1);
+	    
+	    "IEC_Timer_state_of_package_2".TON(IN := #TransferShift2Memory,
+	                                       PT := #TimeBetweenShifters,
+	                                     Q => #PackageLost_shift2);
+	        
+	        "IEC_Timer_state_of_package_3".TON(IN := #TransferShift3Memory,
+	                                           PT := #TimeBetweenShifters,
+	                                           Q => #PackageLost_shift3);
+	            
+	            "IEC_Timer_state_of_package_4".TON(IN := #TransferShift4Memory,
+	                                               PT := #TimeBetweenShifters,
+	                                               Q => #PackageLost_shift4);
+	                
+	                "IEC_Timer_state_of_package_5".TON(IN := #TransferShift5Memory,
+	                                                   PT := #TimeBetweenShifters,
+	                                                   Q => #PackageLost_shift5);
+	                "IEC_Timer_state_of_package_entry".TON(IN := #TransferEntryMemory,
+	                                                       PT := #TimeBetweenShifters,
+	                                                   Q => #PackageLost_entry);
+	                                                   
+	                             
+	                                          
+	                                                   
+	                                                   
+	
+	    
+	    IF #mTransfer = 1 AND "F_TRIG_DB_sh1".Q THEN
+	        #TransferShift1Memory := 1;
+	    ELSIF (#Shifter_2.Sensor.ON AND #DataBlock.Next_exit > 2) OR (#DataBlock.Next_exit <= 2 AND #DataBlock.Next_exit > 0 AND (#Conveyor_1.Sensor_1.ON OR #Conveyor_2.Sensor_1.ON)) THEN
+	        #TransferShift1Memory := 0;
+	    END_IF;
+	    
+	    IF #mTransfer = 1 AND "F_TRIG_DB".Q THEN
+	        #TransferEntryMemory := 1;
+	    ELSIF #Shifter_1.Sensor.ON THEN
+	        #TransferEntryMemory := 0;
+	    END_IF;
+	    
+	    IF #mTransfer = 1 AND "F_TRIG_DB_sh2".Q THEN
+	        #TransferShift2Memory := 1;
+	    ELSIF (#Shifter_2.Sensor.ON AND #DataBlock.Next_exit > 2) OR (#DataBlock.Next_exit <= 2 AND #DataBlock.Next_exit > 0 AND (#Conveyor_3.Sensor_1.ON OR #Conveyor_4.Sensor_1.ON)) THEN
+	        #TransferShift2Memory := 0;
+	    END_IF;
+	    
+	    IF #mTransfer = 1 AND "F_TRIG_DB_sh3".Q THEN
+	        #TransferShift3Memory := 1;
+	    ELSIF (#Shifter_4.Sensor.ON AND #DataBlock.Next_exit > 6) OR (#DataBlock.Next_exit <= 5 AND #DataBlock.Next_exit > 3 AND (#Conveyor_5.Sensor_1.ON OR #Conveyor_6.Sensor_1.ON)) THEN
+	        #TransferShift3Memory := 0;
+	    END_IF;
+	    
+	    IF #mTransfer = 1 AND "F_TRIG_DB_sh4".Q THEN
+	        #TransferShift4Memory := 1;
+	    ELSIF (#Shifter_5.Sensor.ON AND #DataBlock.Next_exit > 8) OR (#DataBlock.Next_exit <= 8 AND #DataBlock.Next_exit > 6 AND (#Conveyor_7.Sensor_1.ON OR #Conveyor_8.Sensor_1.ON)) THEN
+	        #TransferShift4Memory := 0;
+	    END_IF;
+	    
+	    IF #mTransfer = 1 AND "F_TRIG_DB_sh5".Q THEN
+	        #TransferShift5Memory := 1;
+	    ELSIF #Conveyor_9.Sensor_1.ON OR #Conveyor_10.Sensor_1.ON THEN
+	        #TransferShift5Memory := 0;
+	    END_IF;
+	    
+	    
+	END_REGION
+	
+	REGION Checking state OF actuators
+	    
+	    IF (#Shifter_1.Actuator.ON AND NOT #Shifter_1.Actuator."Actuator extended sensor".ON) OR (#Shifter_1.Actuator.ON = 0  AND NOT #Shifter_1.Actuator."Actuator not extended sensor".ON)  THEN
+	        #Actuator_check_1 := 1;
+	    ELSE
+	        #Actuator_check_1 := 0;
+	    END_IF;
+	    
+	    IF (#Shifter_2.Actuator.ON AND NOT #Shifter_2.Actuator."Actuator extended sensor".ON) OR (#Shifter_2.Actuator.ON = 0 AND NOT #Shifter_2.Actuator."Actuator not extended sensor".ON) THEN
+	        #Actuator_check_2 := 1;
+	    ELSE
+	        #Actuator_check_2 := 0;
+	    END_IF;
+	    IF (#Shifter_3.Actuator.ON AND NOT #Shifter_3.Actuator."Actuator extended sensor".ON) OR (#Shifter_3.Actuator.ON = 0 AND NOT #Shifter_3.Actuator."Actuator not extended sensor".ON) THEN
+	        #Actuator_check_3 := 1;
+	    ELSE
+	        #Actuator_check_3 := 0;
+	    END_IF;
+	    IF (#Shifter_4.Actuator.ON AND NOT #Shifter_4.Actuator."Actuator extended sensor".ON) OR (#Shifter_4.Actuator.ON = 0 AND NOT #Shifter_4.Actuator."Actuator not extended sensor".ON) THEN
+	        #Actuator_check_4 := 1;
+	    ELSE
+	        #Actuator_check_4 := 0;
+	    END_IF;
+	    IF (#Shifter_5.Actuator.ON AND NOT #Shifter_5.Actuator."Actuator extended sensor".ON) OR (#Shifter_5.Actuator.ON = 0 AND NOT #Shifter_5.Actuator."Actuator not extended sensor".ON) THEN
+	        #Actuator_check_5 := 1;
+	    ELSE
+	        #Actuator_check_5 := 0;
+	    END_IF;
+	
+	"IEC_Timer_actuator_1".TON(IN:=#Actuator_check_1,
+	                           PT:=#TimeActuatorsError,
+	                           Q=>#Actuator_error_1);
+	
+	"IEC_Timer_actuator_2".TON(IN:=#Actuator_check_2,
+	                           PT:=#TimeActuatorsError,
+	                           Q=>#Actuator_error_2);
+	
+	"IEC_Timer_actuator_3".TON(IN := #Actuator_check_3,
+	                           PT := #TimeActuatorsError,
+	                           Q => #Actuator_error_3);
+	
+	"IEC_Timer_actuator_4".TON(IN := #Actuator_check_4,
+	                           PT := #TimeActuatorsError,
+	                           Q => #Actuator_error_4);
+	
+	"IEC_Timer_actuator_5".TON(IN := #Actuator_check_5,
+	                           PT := #TimeActuatorsError,
+	                           Q => #Actuator_error_5);
+	
+	                        END_REGION
+	                        
+	REGION alarms
+	                            
+	                            IF #StateOfConveyors[1] = 3 AND #StateOfConveyors[2] = 3 AND #StateOfConveyors[3] = 3 AND #StateOfConveyors[4] = 3 AND #StateOfConveyors[5] = 3 AND #StateOfConveyors[6] = 3 AND #StateOfConveyors[7] = 3 AND #StateOfConveyors[8] = 3 AND #StateOfConveyors[9] = 3 AND #StateOfConveyors[10] = 3 THEN
+	                                #Alarm_24 := 1;
+	                            ELSE
+	                                #Alarm_24 := 0;
+	                                ;
+	                            END_IF;
+	                            
+	                            
+	                        END_REGION
+	                        
+	REGION shifters motors AND actuators managment 
+	    
+	    IF #mStart AND NOT #mEmergency AND #mTransfer = 0 THEN
+	        #Entry_Conveyor.Entry_sensor.ON := 1;
+	        ;
+	    END_IF;
+	    
+	    CASE #DataBlock.Next_exit OF
+	        1:
+	            IF #Shifter_1.Sensor.ON = 0 AND #mTransfer = 1 AND NOT #Shifter_1.Actuator.ON THEN
+	                #Shifter_1.Motor."ON/OFF" := 1;
+	            END_IF;
+	            IF #Shifter_1.Sensor.ON = 1 THEN
+	                #Shifter_1.Motor."ON/OFF" := 0;
+	                #Shifter_1.Actuator.ON := 1;
+	                #Shifter_1.Shaft."ON/OFF" := 1;
+	                #Shifter_1.Shaft.Direction := 0;
+	            END_IF;
+	            IF #Shifter_1.Sensor.ON = 0 AND #Shifter_1.Actuator.ON THEN
+	                #Shifter_1.Actuator.ON := 0;
+	                #Shifter_1.Shaft."ON/OFF" := 0;
+	                #DataBlock.Next_exit := 0;
+	                #mTransfer := 0;
+	                ;
+	            END_IF;
+	        2:
+	            IF #Shifter_1.Sensor.ON = 0 AND #mTransfer = 1 AND NOT #Shifter_1.Actuator.ON THEN
+	                #Shifter_1.Motor."ON/OFF" := 1;
+	            END_IF;
+	            IF #Shifter_1.Sensor.ON = 1 THEN
+	                #Shifter_1.Motor."ON/OFF" := 0;
+	                #Shifter_1.Actuator.ON := 1;
+	                #Shifter_1.Shaft."ON/OFF" := 1;
+	                #Shifter_1.Shaft.Direction := 1;
+	            END_IF;
+	            IF #Shifter_1.Sensor.ON = 0 AND #Shifter_1.Actuator.ON THEN
+	                #Shifter_1.Actuator.ON := 0;
+	                #Shifter_1.Shaft."ON/OFF" := 0;
+	                #DataBlock.Next_exit := 0;
+	                #mTransfer := 0;
+	                ;
+	            END_IF;
+	        3:
+	            IF #Shifter_2.Sensor.ON = 0 AND #mTransfer = 1 AND NOT #Shifter_2.Actuator.ON THEN
+	                #Shifter_1.Motor."ON/OFF" := 1;
+	                #Shifter_2.Motor."ON/OFF" := 1;
+	            END_IF;
+	            IF #Shifter_2.Sensor.ON = 1 THEN
+	                #Shifter_1.Motor."ON/OFF" := 0;
+	                #Shifter_2.Motor."ON/OFF" := 0;
+	                #Shifter_2.Actuator.ON := 1;
+	                #Shifter_2.Shaft."ON/OFF" := 1;
+	                #Shifter_2.Shaft.Direction := 0;
+	               
+	            END_IF;
+	            IF #Shifter_2.Sensor.ON = 0 AND #Shifter_2.Actuator.ON THEN
+	                #Shifter_2.Actuator.ON := 0;
+	                #Shifter_2.Shaft."ON/OFF" := 0;
+	                #DataBlock.Next_exit := 0;
+	                #mTransfer := 0;
+	                ;
+	            END_IF;
+	        4:
+	            IF #Shifter_2.Sensor.ON = 0 AND #mTransfer = 1 AND NOT #Shifter_2.Actuator.ON THEN
+	                #Shifter_1.Motor."ON/OFF" := 1;
+	                #Shifter_2.Motor."ON/OFF" := 1;
+	            END_IF;
+	            IF #Shifter_2.Sensor.ON = 1 THEN
+	                #Shifter_1.Motor."ON/OFF" := 0;
+	                #Shifter_2.Motor."ON/OFF" := 0;
+	                #Shifter_2.Actuator.ON := 1;
+	                #Shifter_2.Shaft."ON/OFF" := 1;
+	                #Shifter_2.Shaft.Direction := 1;
+	                #mTransfer := 0;
+	            END_IF;
+	            IF #Shifter_2.Sensor.ON = 0 AND #Shifter_2.Actuator.ON THEN
+	                #Shifter_2.Actuator.ON := 0;
+	                #Shifter_2.Shaft."ON/OFF" := 0;
+	                #DataBlock.Next_exit := 0;
+	                #mTransfer := 0;
+	                ;
+	            END_IF;
+	        5:
+	            IF #Shifter_3.Sensor.ON = 0 AND #mTransfer = 1 AND NOT #Shifter_3.Actuator.ON THEN
+	                #Shifter_1.Motor."ON/OFF" := 1;
+	                #Shifter_2.Motor."ON/OFF" := 1;
+	                #Shifter_3.Motor."ON/OFF" := 1;
+	            END_IF;
+	            IF #Shifter_3.Sensor.ON = 1 THEN
+	                #Shifter_1.Motor."ON/OFF" := 0;
+	                #Shifter_2.Motor."ON/OFF" := 0;
+	                #Shifter_3.Motor."ON/OFF" := 0;
+	                #Shifter_3.Actuator.ON := 1;
+	                #Shifter_3.Shaft."ON/OFF" := 1;
+	                #Shifter_3.Shaft.Direction := 0;
+	                
+	            END_IF;
+	            IF #Shifter_3.Sensor.ON = 0 AND #Shifter_3.Actuator.ON THEN
+	                #Shifter_3.Actuator.ON := 0;
+	                #Shifter_3.Shaft."ON/OFF" := 0;
+	                #DataBlock.Next_exit := 0;
+	                #mTransfer := 0;
+	                ;
+	            END_IF;
+	        6:
+	            IF #Shifter_3.Sensor.ON = 0 AND #mTransfer = 1 AND NOT #Shifter_3.Actuator.ON THEN
+	                #Shifter_1.Motor."ON/OFF" := 1;
+	                #Shifter_2.Motor."ON/OFF" := 1;
+	                #Shifter_3.Motor."ON/OFF" := 1;
+	            END_IF;
+	            IF #Shifter_3.Sensor.ON = 1 THEN
+	                #Shifter_1.Motor."ON/OFF" := 0;
+	                #Shifter_2.Motor."ON/OFF" := 0;
+	                #Shifter_3.Motor."ON/OFF" := 0;
+	                #Shifter_3.Actuator.ON := 1;
+	                #Shifter_3.Shaft."ON/OFF" := 1;
+	                #Shifter_3.Shaft.Direction := 1;
+	                
+	            END_IF;
+	            IF #Shifter_3.Sensor.ON = 0 AND #Shifter_3.Actuator.ON THEN
+	                #Shifter_3.Actuator.ON := 0;
+	                #Shifter_3.Shaft."ON/OFF" := 0;
+	                #DataBlock.Next_exit := 0;
+	                #mTransfer := 0;
+	                ;
+	                ;
+	            END_IF;
+	        7:
+	            IF #Shifter_4.Sensor.ON = 0 AND #mTransfer = 1 AND NOT #Shifter_4.Actuator.ON THEN
+	                #Shifter_1.Motor."ON/OFF" := 1;
+	                #Shifter_2.Motor."ON/OFF" := 1;
+	                #Shifter_3.Motor."ON/OFF" := 1;
+	                #Shifter_4.Motor."ON/OFF" := 1;
+	            END_IF;
+	            IF #Shifter_4.Sensor.ON = 1 THEN
+	                #Shifter_1.Motor."ON/OFF" := 0;
+	                #Shifter_2.Motor."ON/OFF" := 0;
+	                #Shifter_3.Motor."ON/OFF" := 0;
+	                #Shifter_4.Motor."ON/OFF" := 0;
+	                #Shifter_4.Actuator.ON := 1;
+	                #Shifter_4.Shaft."ON/OFF" := 1;
+	                #Shifter_4.Shaft.Direction := 0;
+	                
+	            END_IF;
+	            IF #Shifter_4.Sensor.ON = 0 AND #Shifter_4.Actuator.ON THEN
+	                #Shifter_4.Actuator.ON := 0;
+	                #Shifter_4.Shaft."ON/OFF" := 0;
+	                #DataBlock.Next_exit := 0;
+	                #mTransfer := 0;
+	                ;
+	            END_IF;
+	        8:
+	            IF #Shifter_4.Sensor.ON = 0 AND #mTransfer = 1 AND NOT #Shifter_4.Actuator.ON  THEN
+	                #Shifter_1.Motor."ON/OFF" := 1;
+	                #Shifter_2.Motor."ON/OFF" := 1;
+	                #Shifter_3.Motor."ON/OFF" := 1;
+	                #Shifter_4.Motor."ON/OFF" := 1;
+	            END_IF;
+	            IF #Shifter_4.Sensor.ON = 1 THEN
+	                #Shifter_1.Motor."ON/OFF" := 0;
+	                #Shifter_2.Motor."ON/OFF" := 0;
+	                #Shifter_3.Motor."ON/OFF" := 0;
+	                #Shifter_4.Motor."ON/OFF" := 0;
+	                #Shifter_4.Actuator.ON := 1;
+	                #Shifter_4.Shaft."ON/OFF" := 1;
+	                #Shifter_4.Shaft.Direction := 1;
+	                #mTransfer := 0;
+	            END_IF;
+	            IF #Shifter_4.Sensor.ON = 0 AND #mTransfer = 0 THEN
+	                #Shifter_4.Actuator.ON := 0;
+	                #Shifter_4.Shaft."ON/OFF" := 0;
+	                #DataBlock.Next_exit := 0;
+	                ;
+	            END_IF;
+	        9:
+	            IF #Shifter_5.Sensor.ON = 0 AND #mTransfer = 1 THEN
+	                #Shifter_1.Motor."ON/OFF" := 1;
+	                #Shifter_2.Motor."ON/OFF" := 1;
+	                #Shifter_3.Motor."ON/OFF" := 1;
+	                #Shifter_4.Motor."ON/OFF" := 1;
+	                #Shifter_5.Motor."ON/OFF" := 1;
+	            END_IF;
+	            IF #Shifter_5.Sensor.ON = 1 THEN
+	                #Shifter_1.Motor."ON/OFF" := 0;
+	                #Shifter_2.Motor."ON/OFF" := 0;
+	                #Shifter_3.Motor."ON/OFF" := 0;
+	                #Shifter_4.Motor."ON/OFF" := 0;
+	                #Shifter_5.Motor."ON/OFF" := 0;
+	                #Shifter_5.Actuator.ON := 1;
+	                #Shifter_5.Shaft."ON/OFF" := 1;
+	                #Shifter_5.Shaft.Direction := 0;
+	                #DataBlock.Next_exit := 0;
+	                #mTransfer := 0;
+	            END_IF;
+	            IF #Shifter_5.Sensor.ON = 0 AND #mTransfer = 0 THEN
+	                #Shifter_5.Actuator.ON := 0;
+	                #Shifter_5.Shaft."ON/OFF" := 0;
+	                ;
+	            END_IF;
+	        10:
+	            IF #Shifter_5.Sensor.ON = 1 THEN
+	                #Shifter_1.Motor."ON/OFF" := 0;
+	                #Shifter_2.Motor."ON/OFF" := 0;
+	                #Shifter_3.Motor."ON/OFF" := 0;
+	                #Shifter_4.Motor."ON/OFF" := 0;
+	                #Shifter_5.Motor."ON/OFF" := 0;
+	                #Shifter_5.Actuator.ON := 1;
+	                #Shifter_5.Shaft."ON/OFF" := 1;
+	                #Shifter_5.Shaft.Direction := 1;
+	                #DataBlock.Next_exit := 0;
+	                #mTransfer := 0;
+	            END_IF;
+	            IF #Shifter_5.Sensor.ON = 0 AND #mTransfer = 0 THEN
+	                #Shifter_5.Actuator.ON := 0;
+	                #Shifter_5.Shaft."ON/OFF" := 0;
+	                ;
+	            END_IF;
+	        ELSE
+	            #Shifter_1.Motor."ON/OFF" := 0;
+	            #Shifter_2.Motor."ON/OFF" := 0;
+	            #Shifter_3.Motor."ON/OFF" := 0;
+	            #Shifter_4.Motor."ON/OFF" := 0;
+	            #Shifter_5.Motor."ON/OFF" := 0;
+	            #Shifter_5.Actuator.ON := 0;
+	            #Shifter_4.Actuator.ON := 0;
+	            #Shifter_3.Actuator.ON := 0;
+	            #Shifter_2.Actuator.ON := 0;
+	            #Shifter_1.Actuator.ON := 0;
+	            ;
+	    END_CASE;
+	END_REGION
+	
+	REGION Round robin algorithm
+	    IF #AlgorithmType = 0 AND #mStart AND #mTransfer = 0 AND #Entry_Conveyor.Entry_sensor.ON THEN
+	        IF #NextExitRobin > 0 AND #NextExitRobin < 11 THEN
+	            #mTransfer := 1;
+	        END_IF;
+	        
+	        IF #NextExitRobin = 0 THEN
+	            #mRobinExit := #mRobinExit + 1;
+	            IF #StateOfConveyors[#mRobinExit] < 3 AND #mRobinExit <= 10 THEN
+	                #NextExitRobin := #mRobinExit;
+	                RETURN;
+	            ELSIF #StateOfConveyors[#mRobinExit] = 3 AND #mRobinExit <= 10 THEN
+	                FOR #i := #mRobinExit TO 10 DO
+	                    IF #StateOfConveyors[#i] < 3 THEN
+	                        #mRobinExit := #i;
+	                        #NextExitRobin := #mRobinExit;
+	                        RETURN;
+	                    END_IF;
+	                END_FOR;
+	                FOR #j := 1 TO 10 DO
+	                    IF #StateOfConveyors[#j] < 3 THEN
+	                        #mRobinExit := #j;
+	                        #NextExitRobin := #mRobinExit;
+	                        RETURN;
+	                    END_IF;
+	                END_FOR;
+	            ELSIF #mRobinExit > 10 THEN
+	                FOR #k := 1 TO 10 DO
+	                    IF #StateOfConveyors[#k] < 3 THEN
+	                        #mRobinExit := #k;
+	                        #NextExitRobin := #mRobinExit;
+	                        RETURN;
+	                    END_IF;
+	                END_FOR;
+	            END_IF;
+	        END_IF;
+	        
+	        ;
+	    END_IF;
+	END_REGION
+	
+	REGION Least occupation algorithm
+	    IF #AlgorithmType = 1 AND #mStart AND #mTransfer = 0 AND #Entry_Conveyor.Entry_sensor.ON THEN
+	        IF #mSortExit > 0 AND #mSortExit < 11 THEN
+	            #mTransfer := 1;
+	            ;
+	        END_IF;
+	        
+	        FOR #l := 1 TO 10 DO
+	            IF #StateOfConveyors[#l] = 0 THEN
+	                #mSortExit := #l; // Jeśli znaleziono wyjscie bez paczki, zapisz jego indeks
+	                RETURN;
+	                // Zakończ pętlę, gdy znajdziesz pierwsze pudełko z zapelnieniem 0
+	            END_IF;
+	        END_FOR;
+	        ;
+	        
+	        //Jeśli nie znaleziono wyjscia z zapelnieniem 0, sprawdz wyjscia z zapelnieniem 1
+	        IF #mSortExit = 0 THEN
+	            FOR #m := 1 TO 10 DO
+	                IF #StateOfConveyors[#m] = 1 THEN
+	                    #mSortExit := #m;  // Jeśli znaleziono wyjscie zapisz jego indeks
+	                    IF #mSortExit > 0 AND #mSortExit < 11 THEN
+	                        #mTransfer := 1;
+	                        ;
+	                    END_IF;
+	                    RETURN;  // Zakończ pętlę
+	                END_IF;
+	            END_FOR;
+	        END_IF;
+	        //Jeśli nie znaleziono wyjscia z zapelnieniem 0 ani 1, sprawdzamy pudełka z zapelnieniem 2
+	        IF #mSortExit = 0 THEN
+	            FOR #n := 1 TO 10 DO
+	                IF #StateOfConveyors[#n] = 2 THEN
+	                    #mSortExit := #n;
+	                    IF #mSortExit > 0 AND #mSortExit < 11 THEN
+	                        #mTransfer := 1;
+	                        ;
+	                    END_IF;
+	                    RETURN;
+	                END_IF;
+	            END_FOR;
+	        END_IF;
+	    END_IF;
+	END_REGION
+	
+	REGION Algorithm using scanner 
+	    IF #AlgorithmType = 2 AND #mStart AND #mTransfer = 0 THEN
+	        IF #Entry_Conveyor.Scanner.ScannerRead >= 111100000000 AND #Entry_Conveyor.Scanner.ScannerRead < 111200000000 THEN
+	            #NextExitScanner := 1;
+	            #ID_paczki := #Entry_Conveyor.Scanner.ScannerRead - 111100000000;
+	        ELSIF #Entry_Conveyor.Scanner.ScannerRead >= 222200000000 AND #Entry_Conveyor.Scanner.ScannerRead < 222300000000 THEN
+	            #NextExitScanner := 2;
+	            #ID_paczki := #Entry_Conveyor.Scanner.ScannerRead - 222200000000;
+	        ELSIF #Entry_Conveyor.Scanner.ScannerRead >= 333300000000 AND #Entry_Conveyor.Scanner.ScannerRead < 333400000000 THEN
+	            #NextExitScanner := 3;
+	            #ID_paczki := #Entry_Conveyor.Scanner.ScannerRead - 333300000000;
+	        ELSIF #Entry_Conveyor.Scanner.ScannerRead >= 444400000000 AND #Entry_Conveyor.Scanner.ScannerRead < 444500000000 THEN
+	            #NextExitScanner := 4;
+	            #ID_paczki := #Entry_Conveyor.Scanner.ScannerRead - 444400000000;
+	        ELSIF #Entry_Conveyor.Scanner.ScannerRead >= 555500000000 AND #Entry_Conveyor.Scanner.ScannerRead < 555600000000 THEN
+	            #NextExitScanner := 5;
+	            #ID_paczki := #Entry_Conveyor.Scanner.ScannerRead - 555500000000;
+	        ELSIF #Entry_Conveyor.Scanner.ScannerRead >= 666600000000 AND #Entry_Conveyor.Scanner.ScannerRead < 666700000000 THEN
+	            #NextExitScanner := 6;
+	            #ID_paczki := #Entry_Conveyor.Scanner.ScannerRead - 666600000000;
+	        ELSIF #Entry_Conveyor.Scanner.ScannerRead >= 777700000000 AND #Entry_Conveyor.Scanner.ScannerRead < 777800000000 THEN
+	            #NextExitScanner := 7;
+	            #ID_paczki := #Entry_Conveyor.Scanner.ScannerRead - 777700000000;
+	        ELSIF #Entry_Conveyor.Scanner.ScannerRead >= 888800000000 AND #Entry_Conveyor.Scanner.ScannerRead < 888900000000 THEN
+	            #NextExitScanner := 8;
+	            #ID_paczki := #Entry_Conveyor.Scanner.ScannerRead - 888800000000;
+	        ELSIF #Entry_Conveyor.Scanner.ScannerRead >= 999900000000 AND #Entry_Conveyor.Scanner.ScannerRead < 1000000000000 THEN
+	            #NextExitScanner := 9;
+	            #ID_paczki := #Entry_Conveyor.Scanner.ScannerRead - 999900000000;
+	        ELSIF #Entry_Conveyor.Scanner.ScannerRead > 0 AND #Entry_Conveyor.Scanner.ScannerRead < 100000000 THEN
+	            #NextExitScanner := 10;
+	            #ID_paczki := #Entry_Conveyor.Scanner.ScannerRead;
+	        ELSE
+	            #ErrorRead := 1;
+	            #mTransfer := 0;
+	            #NextExitScanner := 0;
+	            #ID_paczki := 0;
+	        END_IF;
+	    END_IF;
+	    
+	    IF #StateOfConveyors[#NextExitScanner] = 3 THEN
+	        #mTransfer := 0;
+	        #NextExitScanner := 0;
+	        #ID_paczki := 0;
+	        #ErrorNotAvailable := 1; 
+	        ;
+	    END_IF;
+	    
+	    
+	    IF #NextExitScanner > 0 AND #NextExitScanner < 11 AND #Entry_Conveyor.Entry_sensor.ON THEN
+	        #mTransfer := 1;
+	    ELSE
+	        #mTransfer := 0;
+	    END_IF;
+	        
+	    
+	END_REGION
+	
+END_FUNCTION_BLOCK
+

@@ -1,0 +1,63 @@
+﻿FUNCTION_BLOCK "Conveyor"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      Sensor_1 : "Sensor_DT";
+      Sensor_2 : "Sensor_DT";
+      Sensor_3 : "Sensor_DT";
+      HMI_block_all : Bool;
+      HMI_block_conv : Bool;
+      Reset : Bool;
+      Status : Bool;
+   END_VAR
+
+   VAR_OUTPUT 
+      Roller_1 : "Motor_roller_DT";
+      Roller_2 : "Motor_roller_DT";
+      Number_of_packages : Int;
+      Crowded : Bool;
+      Conveyor_state : Int := 3;
+   END_VAR
+
+   VAR 
+      R_TRIG_sensor_1 {InstructionName := 'R_TRIG'; LibVersion := '1.0'} : R_TRIG;
+   END_VAR
+   VAR RETAIN
+      IEC_Counter_Coveyor {InstructionName := 'CTU_INT'; LibVersion := '1.0'} : CTU_INT;
+   END_VAR
+
+
+BEGIN
+	#R_TRIG_sensor_1(CLK := #Sensor_1.ON);
+	
+	IF #Conveyor_state = 3 OR #Status OR #HMI_block_conv OR #HMI_block_all THEN
+	    #Roller_1."ON/OFF" := 0;
+	    #Roller_2."ON/OFF" := 0;
+	ELSIF #Status AND #R_TRIG_sensor_1.Q THEN
+	    IF #Sensor_3.ON = 0 THEN
+	    #Roller_1."ON/OFF" := 1;
+	    #Roller_2."ON/OFF" := 1;
+	END_IF;
+	IF #Sensor_3.ON = 1 AND #Sensor_2.ON = 0 THEN
+	    #Roller_1."ON/OFF" := 1;
+	    #Roller_2."ON/OFF" := 0;
+	END_IF;
+	END_IF;
+	
+	#IEC_Counter_Coveyor(CU:=#R_TRIG_sensor_1.Q,
+	                     PV:=5,
+	                     R:=#Reset,
+	                     Q=>#Crowded,
+	                     CV=>#Number_of_packages);
+	
+	IF #Sensor_1.ON AND #Sensor_2.ON AND #Sensor_3.ON THEN
+	    #Conveyor_state := 3;
+	ELSIF #Sensor_3.ON AND #Sensor_2.ON THEN
+	    #Conveyor_state := 2;
+	ELSIF #Sensor_3.ON THEN
+	    #Conveyor_state := 1;
+	ELSE
+	    #Conveyor_state := 0;
+	END_IF; 
+END_FUNCTION_BLOCK
+
