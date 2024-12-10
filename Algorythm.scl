@@ -12,7 +12,7 @@ VERSION : 0.1
    END_VAR
 
    VAR_OUTPUT 
-      ID_paczki2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : LInt;
+      ID_paczki { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : LInt;
       NextExit { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
       ShifterJam_1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
       ShifterJam_2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
