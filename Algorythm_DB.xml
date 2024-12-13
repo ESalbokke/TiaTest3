@@ -3,164 +3,33 @@
   <Engineering version="V19" />
   <SW.Blocks.InstanceDB ID="0">
     <AttributeList>
-      <InstanceOfName>Algorythm</InstanceOfName>
+      <InstanceOfName>FB_ALGORYTHM</InstanceOfName>
       <InstanceOfType>FB</InstanceOfType>
       <Interface><Sections xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5">
-  <Section Name="Input">
-    <Member Name="DeclarationOfShifters" Datatype="Int" />
-    <Member Name="AlgorithmType" Datatype="Int" />
-    <Member Name="block_main_conveyor" Datatype="Bool" />
-    <Member Name="block_all_conveyors" Datatype="Bool" />
-    <Member Name="Speed_of_motors" Datatype="Int" />
-    <Member Name="TimeBetweenShifters" Datatype="Time">
-      <AttributeList>
-        <BooleanAttribute Name="ExternalAccessible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalVisible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalWritable" SystemDefined="true">false</BooleanAttribute>
-      </AttributeList>
-    </Member>
-    <Member Name="TimeActuatorsError" Datatype="Time">
-      <AttributeList>
-        <BooleanAttribute Name="ExternalAccessible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalVisible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalWritable" SystemDefined="true">false</BooleanAttribute>
-      </AttributeList>
-    </Member>
-  </Section>
-  <Section Name="Output">
-    <Member Name="ID_paczki" Datatype="LInt">
-      <AttributeList>
-        <BooleanAttribute Name="ExternalAccessible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalVisible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalWritable" SystemDefined="true">false</BooleanAttribute>
-      </AttributeList>
-    </Member>
-    <Member Name="NextExit" Datatype="Int">
-      <AttributeList>
-        <BooleanAttribute Name="ExternalAccessible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalVisible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalWritable" SystemDefined="true">false</BooleanAttribute>
-      </AttributeList>
-    </Member>
-    <Member Name="ShifterJam_1" Datatype="Bool">
-      <AttributeList>
-        <BooleanAttribute Name="ExternalAccessible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalVisible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalWritable" SystemDefined="true">false</BooleanAttribute>
-      </AttributeList>
-    </Member>
-    <Member Name="ShifterJam_2" Datatype="Bool">
-      <AttributeList>
-        <BooleanAttribute Name="ExternalAccessible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalVisible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalWritable" SystemDefined="true">false</BooleanAttribute>
-      </AttributeList>
-    </Member>
-    <Member Name="ShifterJam_3" Datatype="Bool">
-      <AttributeList>
-        <BooleanAttribute Name="ExternalAccessible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalVisible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalWritable" SystemDefined="true">false</BooleanAttribute>
-      </AttributeList>
-    </Member>
-    <Member Name="ShifterJam_4" Datatype="Bool">
-      <AttributeList>
-        <BooleanAttribute Name="ExternalAccessible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalVisible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalWritable" SystemDefined="true">false</BooleanAttribute>
-      </AttributeList>
-    </Member>
-    <Member Name="ShifterJam_5" Datatype="Bool">
-      <AttributeList>
-        <BooleanAttribute Name="ExternalAccessible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalVisible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalWritable" SystemDefined="true">false</BooleanAttribute>
-      </AttributeList>
-    </Member>
-    <Member Name="EntryJam" Datatype="Bool">
-      <AttributeList>
-        <BooleanAttribute Name="ExternalAccessible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalVisible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalWritable" SystemDefined="true">false</BooleanAttribute>
-      </AttributeList>
-    </Member>
-    <Member Name="PackageLost_shift1" Datatype="Bool">
-      <AttributeList>
-        <BooleanAttribute Name="ExternalAccessible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalVisible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalWritable" SystemDefined="true">false</BooleanAttribute>
-      </AttributeList>
-    </Member>
-    <Member Name="PackageLost_shift2" Datatype="Bool">
-      <AttributeList>
-        <BooleanAttribute Name="ExternalAccessible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalVisible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalWritable" SystemDefined="true">false</BooleanAttribute>
-      </AttributeList>
-    </Member>
-    <Member Name="PackageLost_shift3" Datatype="Bool">
-      <AttributeList>
-        <BooleanAttribute Name="ExternalAccessible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalVisible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalWritable" SystemDefined="true">false</BooleanAttribute>
-      </AttributeList>
-    </Member>
-    <Member Name="PackageLost_shift4" Datatype="Bool">
-      <AttributeList>
-        <BooleanAttribute Name="ExternalAccessible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalVisible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalWritable" SystemDefined="true">false</BooleanAttribute>
-      </AttributeList>
-    </Member>
-    <Member Name="PackageLost_shift5" Datatype="Bool">
-      <AttributeList>
-        <BooleanAttribute Name="ExternalAccessible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalVisible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalWritable" SystemDefined="true">false</BooleanAttribute>
-      </AttributeList>
-    </Member>
-    <Member Name="PackageLost_entry" Datatype="Bool">
-      <AttributeList>
-        <BooleanAttribute Name="ExternalAccessible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalVisible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalWritable" SystemDefined="true">false</BooleanAttribute>
-      </AttributeList>
-    </Member>
-    <Member Name="mEmergency" Datatype="Bool">
-      <AttributeList>
-        <BooleanAttribute Name="ExternalAccessible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalVisible" SystemDefined="true">false</BooleanAttribute>
-        <BooleanAttribute Name="ExternalWritable" SystemDefined="true">false</BooleanAttribute>
-      </AttributeList>
-    </Member>
-    <Member Name="Alarm_24" Datatype="Bool" />
-  </Section>
+  <Section Name="Input" />
+  <Section Name="Output" />
   <Section Name="InOut">
-    <Member Name="Emergency_Stop" Datatype="&quot;Button_DT&quot;" />
-    <Member Name="Start" Datatype="&quot;Button_DT&quot;" />
-    <Member Name="Stop" Datatype="&quot;Button_DT&quot;" />
-    <Member Name="Reset" Datatype="&quot;Button_DT&quot;" />
-    <Member Name="Conveyor_1" Datatype="&quot;Conveyor&quot;" />
-    <Member Name="Conveyor_2" Datatype="&quot;Conveyor&quot;" />
-    <Member Name="Conveyor_3" Datatype="&quot;Conveyor&quot;" />
-    <Member Name="Conveyor_4" Datatype="&quot;Conveyor&quot;" />
-    <Member Name="Conveyor_5" Datatype="&quot;Conveyor&quot;" />
-    <Member Name="Conveyor_6" Datatype="&quot;Conveyor&quot;" />
-    <Member Name="Conveyor_7" Datatype="&quot;Conveyor&quot;" />
-    <Member Name="Conveyor_8" Datatype="&quot;Conveyor&quot;" />
-    <Member Name="Conveyor_9" Datatype="&quot;Conveyor&quot;" />
-    <Member Name="Conveyor_10" Datatype="&quot;Conveyor&quot;" />
-    <Member Name="Shifter_1" Datatype="&quot;Shifter_DT&quot;" />
-    <Member Name="Shifter_2" Datatype="&quot;Shifter_DT&quot;" />
-    <Member Name="Shifter_3" Datatype="&quot;Shifter_DT&quot;" />
-    <Member Name="Shifter_4" Datatype="&quot;Shifter_DT&quot;" />
-    <Member Name="Shifter_5" Datatype="&quot;Shifter_DT&quot;" />
-    <Member Name="Entry_Conveyor" Datatype="&quot;Entry_conveyor&quot;" />
-    <Member Name="DataBlock" Datatype="&quot;Data_Block&quot;" />
+    <Member Name="FB_CONVEYOR1_DB" Datatype="&quot;FB_CONVEYOR&quot;" />
+    <Member Name="FB_COVEYOR2_DB" Datatype="&quot;FB_CONVEYOR&quot;" />
+    <Member Name="FB_COVEYOR3_DB" Datatype="&quot;FB_CONVEYOR&quot;" />
+    <Member Name="FB_COVEYOR4_DB" Datatype="&quot;FB_CONVEYOR&quot;" />
+    <Member Name="FB_COVEYOR5_DB" Datatype="&quot;FB_CONVEYOR&quot;" />
+    <Member Name="FB_COVEYOR6_DB" Datatype="&quot;FB_CONVEYOR&quot;" />
+    <Member Name="FB_COVEYOR7_DB" Datatype="&quot;FB_CONVEYOR&quot;" />
+    <Member Name="FB_COVEYOR8_DB" Datatype="&quot;FB_CONVEYOR&quot;" />
+    <Member Name="FB_COVEYOR9_DB" Datatype="&quot;FB_CONVEYOR&quot;" />
+    <Member Name="FB_COVEYOR10_DB" Datatype="&quot;FB_CONVEYOR&quot;" />
+    <Member Name="dtShifter1_DB" Datatype="&quot;Shifter_DT&quot;" />
+    <Member Name="dtShifter2_DB" Datatype="&quot;Shifter_DT&quot;" />
+    <Member Name="dtShifter3_DB" Datatype="&quot;Shifter_DT&quot;" />
+    <Member Name="dtShifter4_DB" Datatype="&quot;Shifter_DT&quot;" />
+    <Member Name="dtShifter5_DB" Datatype="&quot;Shifter_DT&quot;" />
+    <Member Name="dtEntryConveyor_DB" Datatype="&quot;Entry_conveyor&quot;" />
+    <Member Name="dtDataBlock_DB" Datatype="&quot;Data_Block&quot;" />
   </Section>
   <Section Name="Static" />
 </Sections></Interface>
-      <Name>Algorythm_DB</Name>
+      <Name>DB_ALGORYTHM</Name>
       <Namespace />
       <Number>4</Number>
       <ProgrammingLanguage>DB</ProgrammingLanguage>

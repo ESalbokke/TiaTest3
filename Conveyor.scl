@@ -1,22 +1,22 @@
-﻿FUNCTION_BLOCK "Conveyor"
+﻿FUNCTION_BLOCK "FB_CONVEYOR"
 { S7_Optimized_Access := 'TRUE' }
 VERSION : 0.1
    VAR_INPUT 
-      Sensor_1 : "Sensor_DT";
-      Sensor_2 : "Sensor_DT";
-      Sensor_3 : "Sensor_DT";
-      HMI_block_all : Bool;
-      HMI_block_conv : Bool;
-      Reset : Bool;
-      Status : Bool;
+      dtSensor1_DB : "Sensor_DT";
+      dtSensor2_DB : "Sensor_DT";
+      dtSensor3_DB : "Sensor_DT";
+      xBlockAllHMI_DB : Bool;
+      xBlockConv_DB : Bool;
+      dtResetButton_DB : Bool;
+      xEmergency_DB : Bool;
    END_VAR
 
    VAR_OUTPUT 
-      Roller_1 : "Motor_roller_DT";
-      Roller_2 : "Motor_roller_DT";
-      Number_of_packages : Int;
-      Crowded : Bool;
-      Conveyor_state : Int := 3;
+      dtMotorRoller1_DB : "Motor_roller_DT";
+      dtMotorRoller2_DB : "Motor_roller_DT";
+      iNumberOfPackages_DB : Int;
+      xCrowded_DB : Bool;
+      iConveyorState : Int := 3;
    END_VAR
 
    VAR 
@@ -28,36 +28,36 @@ VERSION : 0.1
 
 
 BEGIN
-	#R_TRIG_sensor_1(CLK := #Sensor_1.ON);
+	#R_TRIG_sensor_1(CLK := #dtSensor1_DB.ON);
 	
-	IF #Conveyor_state = 3 OR #Status OR #HMI_block_conv OR #HMI_block_all THEN
-	    #Roller_1."ON/OFF" := 0;
-	    #Roller_2."ON/OFF" := 0;
-	ELSIF #Status AND #R_TRIG_sensor_1.Q THEN
-	    IF #Sensor_3.ON = 0 THEN
-	    #Roller_1."ON/OFF" := 1;
-	    #Roller_2."ON/OFF" := 1;
+	IF #iConveyorState = 3 OR #xEmergency_DB OR #xBlockConv_DB OR #xBlockAllHMI_DB THEN
+	    #dtMotorRoller1_DB."ON/OFF" := 0;
+	    #dtMotorRoller2_DB."ON/OFF" := 0;
+	ELSIF #xEmergency_DB AND #R_TRIG_sensor_1.Q THEN
+	    IF #dtSensor3_DB.ON = 0 THEN
+	    #dtMotorRoller1_DB."ON/OFF" := 1;
+	    #dtMotorRoller2_DB."ON/OFF" := 1;
 	END_IF;
-	IF #Sensor_3.ON = 1 AND #Sensor_2.ON = 0 THEN
-	    #Roller_1."ON/OFF" := 1;
-	    #Roller_2."ON/OFF" := 0;
+	IF #dtSensor3_DB.ON = 1 AND #dtSensor2_DB.ON = 0 THEN
+	    #dtMotorRoller1_DB."ON/OFF" := 1;
+	    #dtMotorRoller2_DB."ON/OFF" := 0;
 	END_IF;
 	END_IF;
 	
 	#IEC_Counter_Coveyor(CU:=#R_TRIG_sensor_1.Q,
 	                     PV:=5,
-	                     R:=#Reset,
-	                     Q=>#Crowded,
-	                     CV=>#Number_of_packages);
+	                     R:=#dtResetButton_DB,
+	                     Q=>#xCrowded_DB,
+	                     CV=>#iNumberOfPackages_DB);
 	
-	IF #Sensor_1.ON AND #Sensor_2.ON AND #Sensor_3.ON THEN
-	    #Conveyor_state := 3;
-	ELSIF #Sensor_3.ON AND #Sensor_2.ON THEN
-	    #Conveyor_state := 2;
-	ELSIF #Sensor_3.ON THEN
-	    #Conveyor_state := 1;
+	IF #dtSensor1_DB.ON AND #dtSensor2_DB.ON AND #dtSensor3_DB.ON THEN
+	    #iConveyorState := 3;
+	ELSIF #dtSensor3_DB.ON AND #dtSensor2_DB.ON THEN
+	    #iConveyorState := 2;
+	ELSIF #dtSensor3_DB.ON THEN
+	    #iConveyorState := 1;
 	ELSE
-	    #Conveyor_state := 0;
+	    #iConveyorState := 0;
 	END_IF; 
 END_FUNCTION_BLOCK
 
